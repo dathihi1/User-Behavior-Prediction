@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Data files (competition data — do not commit)
+data/
+
+# Model artifacts (large binary files — too large for GitHub)
+outputs/models/*.pkl
+
+# Submission CSVs (generated artifacts)
+outputs/submissions/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Claude local config
+.claude/settings.local.json
+
+# Windows artifacts
+nul
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
