@@ -12,6 +12,8 @@ Mô hình phân loại đa đầu ra dự đoán đồng thời 6 thuộc tính 
 | Đầu ra | 6 thuộc tính: `attr_1`–`attr_6` (uint16) |
 | Metric chính | **Exact-Match Accuracy** — cả 6 thuộc tính phải đúng đồng thời |
 | Dữ liệu huấn luyện | 51.000 chuỗi × 37 cột hành động |
+| Dữ liệu validation | 7.200 chuỗi (chỉ dùng đánh giá offline) |
+| Dữ liệu test | 38.000 chuỗi (không có nhãn) |
 | Số hành động duy nhất | 254 (ID thưa từ 102–24.438, ánh xạ dày về 1–254) |
 | Số lớp mục tiêu | attr_1=12, attr_2=31, attr_3=99, attr_4=12, attr_5=31, attr_6=99 |
 
@@ -121,9 +123,49 @@ jupyter lab
 
 | Notebook | Mục đích |
 |----------|---------|
-| `01_eda.ipynb` | Phân tích phân phối dữ liệu, tương quan đặc trưng–mục tiêu |
+| `01_eda.ipynb` | Phân tích phân phối dữ liệu, tương quan đặc trưng–mục tiêu, phát hiện bất thường đa chiều |
 | `02_feature_engineering.ipynb` | Khám phá và kiểm tra FeaturePipeline |
 | `03_modeling.ipynb` | Huấn luyện XGBoost → LightGBM → LSTM → Transformer → Ensemble, so sánh và sinh submission |
+
+---
+
+## Phân Tích EDA — `01_eda.ipynb`
+
+Notebook EDA được tổ chức thành 6 phần chính, chỉ sử dụng `X_train` / `Y_train` (ngoại trừ biểu đồ so sánh độ dài chuỗi):
+
+| # | Phần | Nội dung chính |
+|---|------|----------------|
+| 1 | Tải dữ liệu & Kiểm tra chất lượng | Shape, dtypes, missing values, trích xuất chuỗi |
+| 2 | Phân tích chuỗi | Phân phối độ dài (train/val/test), từ vựng action, top-50 tần suất |
+| 3 | Phân phối nhãn đích | Bar chart 6 targets, ma trận tương quan, kiểm tra class balance |
+| 4 | Phân tích hành vi khách hàng | Entropy/uniqueness/length, tương quan đặc trưng–mục tiêu |
+| 5 | Phát hiện bất thường | IQR (ngưỡng độ dài), Z-score đa chiều, hồ sơ outlier, Zipf / action hiếm |
+| 6 | Kết luận & Insights nghiệp vụ | Tổng hợp insights, ý nghĩa cho mô hình, anomaly summary |
+
+### Phát Hiện Bất Thường (Section 5) — Chi Tiết
+
+Bổ sung 4 lớp phân tích bất thường:
+
+| Phân tích | Phương pháp | Kết quả chính |
+|-----------|------------|---------------|
+| IQR theo độ dài chuỗi | Q1−1.5×IQR, Q3+1.5×IQR | 1.026 chuỗi quá dài (>24 actions, 2%) |
+| Z-score đa chiều | Z > 3 trên length / entropy / uniqueness_ratio | 1.122 outliers tổng (2.2%) |
+| So sánh hồ sơ outlier | Normalized bar chart + entropy nhãn đích | Outlier dài 2.5× nhưng phân phối nhãn không lệch |
+| Phân tích Zipf / action hiếm | Log-log, độ phủ tích lũy | 3 dominant actions (18.9%), 110 rare actions (1.84%) |
+
+### Biểu Đồ Sinh Ra (`outputs/figures/`)
+
+| File | Nội dung |
+|------|---------|
+| `sequence_length_distribution.png` | Histogram độ dài chuỗi train/val/test |
+| `action_frequency_distribution.png` | Top-50 tần suất action, phân phối log-scale |
+| `target_distributions.png` | Bar chart phân phối 6 targets |
+| `target_correlation.png` | Ma trận tương quan giữa 6 targets |
+| `features_target_correlation.png` | Heatmap đặc trưng chuỗi vs mục tiêu |
+| `iqr_anomaly_detection.png` | Histogram + box plot với ngưỡng IQR |
+| `multidim_outlier_scatter.png` | Scatter 3 cặp chiều, tô màu loại bất thường |
+| `outlier_profile_target_impact.png` | Hồ sơ so sánh + entropy nhãn normal vs outlier |
+| `action_frequency_outliers.png` | Zipf curve, độ phủ tích lũy, phân phối action hiếm |
 
 ---
 
@@ -200,6 +242,18 @@ Seed cố định ở 42 cho numpy, Python random và PyTorch:
 from src.utils import set_seed
 set_seed(42)
 ```
+
+### Kết Quả EDA Quan Trọng
+
+| Insight | Giá trị |
+|---------|---------|
+| Outlier theo độ dài (IQR) | 1.026 chuỗi >24 actions (2.0%) |
+| Outlier đa chiều (Z-score > 3) | 1.122 chuỗi (2.2%) |
+| Action dominant (>3% tổng) | 3 actions — 105 (8.6%), 102 (6.3%), 103 (3.9%) |
+| Action hiếm (<0.05% tổng) | 110 actions (1.84% tổng lượt tương tác) |
+| Độ phủ 80% interaction | Top 59 actions đủ |
+| Repetition tối đa | 2 (không có bot behavior) |
+| Phân phối nhãn outlier vs normal | Tương đương — outlier không cần loại bỏ |
 
 ---
 
