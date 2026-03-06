@@ -11,9 +11,6 @@ env/
 dist/
 build/
 
-# Data files (competition data — do not commit)
-data/
-
 # Model artifacts (large binary files — too large for GitHub)
 outputs/models/*.pkl
 
